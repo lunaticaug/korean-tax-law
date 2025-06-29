@@ -5,10 +5,11 @@ __pycache__/
 .ipynb_checkpoints/
 .vscode/
 *_Private.md
-prompts/STT-to-script/Dictionary/glossary.json
-prompts/STT-to-script/Dictionary/snippet.json
-# Python/250505 CPA Audit 하위의 pdfs 폴더 무시
-Python/250505 CPA Audit/pdfs/
+*.pdf
+*.hwp
+*.docx
+*.doc
+
 # Ignore private directories and files
 **/private/**
 **/secrets/**
