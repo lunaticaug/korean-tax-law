@@ -1,8 +1,3 @@
-좋습니다. 법제처 open API 가이드 페이지에 포함된 **모든 API 엔드포인트의 명세서를 하나로 정리**해드릴게요.
-
-각 API의 요청 URL, 요청 파라미터, 설명, 샘플 URL, 출력 결과 필드 등을 빠짐없이 수집해 문서 형태로 제공하겠습니다. 작업이 완료되면 확인하실 수 있도록 알려드릴게요.
-
-
 # 국가법령정보센터 OPEN API 엔드포인트 종합 가이드
 
 본 문서는 국가법령정보 공동활용 사이트에서 제공하는 **OPEN API** 엔드포인트와 그 요청 파라미터, 응답 필드를 정리한 명세서입니다. 개발자가 코드를 작성하는 데 참고할 수 있도록 **엔드포인트별 요청 URL, 요청 변수, 샘플 URL, 응답 필드** 등을 상세히 나열합니다.
@@ -13,7 +8,8 @@
 
 ### 현행법령 목록 조회 API
 
-* **요청 URL:** `http://www.law.go.kr/DRF/lawSearch.do?target=law`&#x20;
+* **요청 URL:** `http://www.law.go.kr/DRF/lawSearch.do?target=law`
+
 
 * **요청 변수:**
 
@@ -82,7 +78,8 @@
 
 ### 현행법령 본문 조회 API
 
-* **요청 URL:** `http://www.law.go.kr/DRF/lawService.do?target=law`&#x20;
+* **요청 URL:** `http://www.law.go.kr/DRF/lawService.do?target=law`
+
 
 * **요청 변수:**
 
@@ -169,7 +166,8 @@
 
 (특정 시행일을 기준으로 현행/연혁 법령 검색)
 
-* **요청 URL:** `http://www.law.go.kr/DRF/lawSearch.do?target=eflaw`&#x20;
+* **요청 URL:** `http://www.law.go.kr/DRF/lawSearch.do?target=eflaw`
+
 
 * **요청 변수:**
 
@@ -214,7 +212,8 @@
 
 (특정 시행일자의 법령 본문 조회 또는 연혁 법령 조회)
 
-* **요청 URL:** `http://www.law.go.kr/DRF/lawService.do?target=eflaw`&#x20;
+* **요청 URL:** `http://www.law.go.kr/DRF/lawService.do?target=eflaw`
+
 
 * **요청 변수:**
 
@@ -251,7 +250,8 @@
 
 (특정 법령의 연혁 이력 목록 조회)
 
-* **요청 URL:** `http://www.law.go.kr/DRF/lawSearch.do?target=lsHistory`&#x20;
+* **요청 URL:** `http://www.law.go.kr/DRF/lawSearch.do?target=lsHistory`
+
 
 * **요청 변수:**
 
@@ -296,7 +296,8 @@
 
 (특정 법령의 연혁 상세 내용 조회)
 
-* **요청 URL:** `http://www.law.go.kr/DRF/lawService.do?target=lsHistory`&#x20;
+* **요청 URL:** `http://www.law.go.kr/DRF/lawService.do?target=lsHistory`
+
 
 * **요청 변수:**
 
@@ -325,7 +326,8 @@
 
 * **현행법령 본문 조항호목 조회 API** (특정 법령의 특정 조항-항-호-목만 조회)
 
-  * **요청 URL:** `http://www.law.go.kr/DRF/lawService.do?target=lawjosub`&#x20;
+  * **요청 URL:** `http://www.law.go.kr/DRF/lawService.do?target=lawjosub`
+
   * **요청 변수:**
 
     * `OC` (string, 필수): 이메일 ID
@@ -371,7 +373,8 @@
 
 (상위 법령의 개별 조문에 의해 **위임된 하위법령** 정보를 조회)
 
-* **요청 URL:** `http://www.law.go.kr/DRF/lawService.do?target=lsDelegated`&#x20;
+* **요청 URL:** `http://www.law.go.kr/DRF/lawService.do?target=lsDelegated`
+
 
 * **요청 변수:**
 
@@ -411,7 +414,8 @@
 
 ### 영문법령 목록 조회 API
 
-* **요청 URL:** `http://www.law.go.kr/DRF/lawSearch.do?target=elaw`&#x20;
+* **요청 URL:** `http://www.law.go.kr/DRF/lawSearch.do?target=elaw`
+
 
 * **요청 변수:**
 
@@ -465,7 +469,8 @@
 
 ### 영문법령 본문 조회 API
 
-* **요청 URL:** `http://www.law.go.kr/DRF/lawService.do?target=elaw`&#x20;
+* **요청 URL:** `http://www.law.go.kr/DRF/lawService.do?target=elaw`
+
 
 * **요청 변수:**
 
@@ -497,7 +502,8 @@
 
 (법령의 **조문 체계도**를 검색)
 
-* **요청 URL:** `http://www.law.go.kr/DRF/lawSearch.do?target=lsStmd`&#x20;
+* **요청 URL:** `http://www.law.go.kr/DRF/lawSearch.do?target=lsStmd`
+
 
 * **요청 변수:**
 
@@ -607,7 +613,8 @@
 
 ### 판례 목록 조회 API
 
-* **요청 URL:** `http://www.law.go.kr/DRF/lawSearch.do?target=prec`&#x20;
+* **요청 URL:** `http://www.law.go.kr/DRF/lawSearch.do?target=prec`
+
 
 * **요청 변수:**
 
@@ -674,7 +681,8 @@
 
 ### 판례 본문 조회 API
 
-* **요청 URL:** `http://www.law.go.kr/DRF/lawService.do?target=prec`&#x20;
+* **요청 URL:** `http://www.law.go.kr/DRF/lawService.do?target=prec`
+
 
 * **요청 변수:**
 
@@ -774,7 +782,8 @@
 
 ### 공정거래위원회 결정문 목록 조회 API
 
-* **요청 URL:** `http://www.law.go.kr/DRF/lawSearch.do?target=ftc`&#x20;
+* **요청 URL:** `http://www.law.go.kr/DRF/lawSearch.do?target=ftc`
+
 
 * **요청 변수:**
 
@@ -830,7 +839,8 @@
 
 ### 국민권익위원회 결정문 목록 조회 API
 
-* **요청 URL:** `http://www.law.go.kr/DRF/lawSearch.do?target=acr`&#x20;
+* **요청 URL:** `http://www.law.go.kr/DRF/lawSearch.do?target=acr`
+
 
 * **요청 변수:**
 
@@ -907,7 +917,8 @@
 
 ### 개인정보보호위원회 결정문 목록 조회 API
 
-* **요청 URL:** `http://www.law.go.kr/DRF/lawSearch.do?target=ppc`&#x20;
+* **요청 URL:** `http://www.law.go.kr/DRF/lawSearch.do?target=ppc`
+
 
 * **요청 변수:** (개인정보위는 **안건명** 기준)
 
@@ -983,4 +994,5 @@
 
 ---
 
-以上의 내용을 통해 OPEN API에서 활용 가능한 엔드포인트와 세부 설정값들을 모두 살펴보았습니다. 필요한 API의 **요청 URL과 파라미터를 정확히 설정**하여 호출하면, 국가법령정보센터의 다양한 법령정보 데이터를 프로그램으로 활용할 수 있습니다.&#x20;
+以上의 내용을 통해 OPEN API에서 활용 가능한 엔드포인트와 세부 설정값들을 모두 살펴보았습니다. 필요한 API의 **요청 URL과 파라미터를 정확히 설정**하여 호출하면, 국가법령정보센터의 다양한 법령정보 데이터를 프로그램으로 활용할 수 있습니다.
+

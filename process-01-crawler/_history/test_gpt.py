@@ -2,28 +2,31 @@
 # -*- coding: utf-8 -*-
 """
 국가법령정보 OPEN API - 전체 엔드포인트 샘플 호출 테스트 스크립트
+Version 2.0.0 (2025-01-11)
 - 목록 페이지를 파싱해 모든 가이드(guideResult) 페이지를 수집
 - 각 가이드에서 '샘플 URL'을 자동 추출 후 호출
-- 인증 파라미터는 가이드의 관례대로 OC=test 사용
-- 사용 시: python test_openlaw_endpoints.py
+- API_law.yaml 설정 파일 지원 (없으면 OC=test 사용)
+- 민감정보 자동 제거 기능 추가
+- 사용 시: python test_gpt.py
 """
 import os
 import re
 import time
 import json
 import html
-import shutil
+import yaml
 import random
 import pathlib
 import urllib.parse as urlparse
+from datetime import datetime
+from typing import Dict, Any
 
 import requests
 from bs4 import BeautifulSoup
 
 GUIDE_LIST_URL = "https://open.law.go.kr/LSO/openApi/guideList.do"
 GUIDE_BASE     = "https://open.law.go.kr"
-OUT_DIR        = "openlaw_api_test_out"
-USER_AGENT     = "Mozilla/5.0 (compatible; OpenLawAPITester/1.0; +https://open.law.go.kr)"
+USER_AGENT     = "Mozilla/5.0 (compatible; OpenLawAPITester/2.0; +https://open.law.go.kr)"
 TIMEOUT_SEC    = 15
 SLEEP_SEC      = 0.5   # 서버 배려용(무리한 동시호출 지양)
 
@@ -32,6 +35,58 @@ session.headers.update({"User-Agent": USER_AGENT})
 
 def ensure_dir(p: str):
     pathlib.Path(p).mkdir(parents=True, exist_ok=True)
+
+def load_config() -> Dict:
+    """YAML 설정 파일 로드"""
+    config_file = 'API_law.yaml'
+    
+    if not os.path.exists(config_file):
+        print("ℹ️ API_law.yaml 파일이 없습니다. test 키를 사용합니다.")
+        return {'email_id': 'test'}
+    
+    try:
+        with open(config_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+            if content.startswith('---'):
+                parts = content.split('---')
+                if len(parts) >= 3:
+                    yaml_content = parts[2].strip()
+                else:
+                    yaml_content = content
+            else:
+                yaml_content = content
+                
+            config = yaml.safe_load(yaml_content)
+            return config if config else {'email_id': 'test'}
+    except Exception as e:
+        print(f"⚠️ YAML 파일 읽기 오류: {e}")
+        return {'email_id': 'test'}
+
+def sanitize_data(data: Any) -> Any:
+    """
+    민감정보 제거 (재귀적)
+    - OC 파라미터 제거
+    - 이메일 패턴 마스킹
+    """
+    if isinstance(data, dict):
+        cleaned = {}
+        for key, value in data.items():
+            # OC 관련 필드 제거
+            if key.upper() == 'OC' or key == 'email_id':
+                continue
+            # URL에서 OC 파라미터 제거
+            if key in ['url', 'guide_url', 'sample_url'] and isinstance(value, str):
+                value = re.sub(r'[?&]OC=[^&]*', '', value)
+            # 값에서도 재귀적으로 제거
+            cleaned[key] = sanitize_data(value)
+        return cleaned
+    elif isinstance(data, list):
+        return [sanitize_data(item) for item in data]
+    elif isinstance(data, str):
+        # 이메일 패턴 마스킹
+        return re.sub(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', '***@***.***', data)
+    else:
+        return data
 
 def slugify(text: str) -> str:
     text = re.sub(r"\s+", "_", text.strip())
@@ -44,9 +99,14 @@ def get(url: str) -> requests.Response:
 def find_all_guide_pages(list_html: str):
     """
     guideList 페이지에서 모든 guideResult.do?htmlName=... 링크를 추출
-    - 일부는 a[href], 일부는 onclick 등으로 있을 수 있어 전체 HTML에서 정규식으로 긁습니다.
+    - onclick="javascript:openApiGuide('...')" 형식으로 되어 있음
     """
-    html_names = set(re.findall(r"guideResult\.do\?htmlName=([A-Za-z0-9_]+)", list_html))
+    # onclick 패턴에서 htmlName 추출
+    html_names = set(re.findall(r"openApiGuide\(['\"]([A-Za-z0-9_]+)['\"]\)", list_html))
+    
+    # guideResult.do?htmlName= 패턴도 추가로 확인
+    html_names.update(re.findall(r"guideResult\.do\?htmlName=([A-Za-z0-9_]+)", list_html))
+    
     guides = [f"{GUIDE_BASE}/LSO/openApi/guideResult.do?htmlName={name}" for name in sorted(html_names)]
     return guides
 
@@ -109,9 +169,9 @@ def parse_guide_page(url: str):
         "html": r.text,
     }
 
-def ensure_oc_param(u: str) -> str:
+def ensure_oc_param(u: str, oc_value: str = None) -> str:
     """
-    샘플 URL에 OC 파라미터가 빠져 있으면 OC=test 추가.
+    샘플 URL에 OC 파라미터가 빠져 있으면 추가.
     또 type 파라미터가 전혀 없고 lawService/lawSearch면 type=XML을 붙여줍니다(보수적 보정).
     """
     parsed = urlparse.urlparse(u)
@@ -119,7 +179,11 @@ def ensure_oc_param(u: str) -> str:
     changed = False
 
     if "OC" not in qs:
-        qs["OC"] = ["test"]  # 가이드에서 쓰는 샘플 OC
+        # 설정 파일이나 기본값 사용
+        if oc_value:
+            qs["OC"] = [oc_value]
+        else:
+            qs["OC"] = ["test"]  # 기본값
         changed = True
 
     # type이 전혀 없고 DRF 호출이면 XML 기본
@@ -132,7 +196,7 @@ def ensure_oc_param(u: str) -> str:
         u = urlparse.urlunparse(parsed._replace(query=new_q))
     return u
 
-def save_response(name_slug: str, resp: requests.Response, url: str):
+def save_response(name_slug: str, resp: requests.Response, url: str, out_dir: str):
     ct = (resp.headers.get("Content-Type") or "").lower()
     # 확장자 추정
     if "json" in ct:
@@ -143,19 +207,52 @@ def save_response(name_slug: str, resp: requests.Response, url: str):
         # 대부분 XML
         ext = "xml"
     safe_name = name_slug[:80]
-    path = os.path.join(OUT_DIR, f"{safe_name}.{ext}")
-    with open(path, "wb") as f:
-        f.write(resp.content)
+    path = os.path.join(out_dir, f"{safe_name}.{ext}")
+    
+    try:
+        # 텍스트로 디코딩 시도
+        content = resp.text
+        # OC 파라미터 제거
+        content = re.sub(r'[?&]OC=[^&"\s]*', '', content)
+        content = re.sub(r'<OC>[^<]*</OC>', '', content)  # XML 태그 내 OC 제거
+        
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+    except:
+        # 바이너리 데이터인 경우 그대로 저장
+        with open(path, "wb") as f:
+            f.write(resp.content)
+    
     return path
 
 def main():
+    print("="*60)
+    print("🚀 법제처 Open API 전체 엔드포인트 테스트")
+    print("="*60)
+    
+    # 설정 로드
+    config = load_config()
+    email_id = config.get('email_id', 'test')
+    
+    # 이메일에서 @ 앞부분만 추출
+    if '@' in email_id:
+        email_id = email_id.split('@')[0]
+    
+    # 실행 시간 기준 폴더명 생성
+    session_folder = datetime.now().strftime('%Y%m%d_%H%M%S')
+    out_dir = f'_cache/{session_folder}'
+    
+    print(f"ℹ️ 사용할 OC 값: {'***' if email_id != 'test' else 'test'}")
+    print(f"📁 결과 저장 폴더: {out_dir}")
+    print()
+    
     print(f"[1/4] 목록 페이지 요청 → {GUIDE_LIST_URL}")
     r = get(GUIDE_LIST_URL)
     r.raise_for_status()
     guides = find_all_guide_pages(r.text)
     print(f"  - guideResult 페이지 수집: {len(guides)}개 발견")
 
-    ensure_dir(OUT_DIR)
+    ensure_dir(out_dir)
     meta = []
     fail_records = []
 
@@ -192,8 +289,10 @@ def main():
 
         ok = 0
         for sidx, su in enumerate(samples, 1):
-            url_fixed = ensure_oc_param(su)
-            print(f"    [{sidx}/{len(samples)}] CALL → {url_fixed}")
+            url_fixed = ensure_oc_param(su, email_id)
+            # 출력시 OC 값 마스킹
+            display_url = re.sub(r'OC=[^&]*', 'OC=***', url_fixed)
+            print(f"    [{sidx}/{len(samples)}] CALL → {display_url}")
             try:
                 time.sleep(SLEEP_SEC + random.uniform(0, 0.3))
                 resp = get(url_fixed)
@@ -201,32 +300,53 @@ def main():
                 ctype  = resp.headers.get("Content-Type", "")
                 size   = len(resp.content)
                 if status == 200 and size > 0:
-                    fname = save_response(slugify(f"{title}_{sidx}"), resp, url_fixed)
-                    print(f"      OK {status} | {ctype} | {size} bytes → {fname}")
+                    # 가이드 번호를 포함해서 파일명 중복 방지
+                    fname = save_response(slugify(f"{title}_{idx}_{sidx}"), resp, url_fixed, out_dir)
+                    print(f"      ✅ {status} | {ctype} | {size} bytes → {fname}")
                     ok += 1
                 else:
-                    print(f"      FAIL {status} | {ctype} | {size} bytes")
-                    fail_records.append({"stage":"call","guide":g,"title":title,"url":url_fixed,"status":status,"ctype":ctype,"size":size})
+                    print(f"      ❌ {status} | {ctype} | {size} bytes")
+                    # URL에서 OC 제거 후 저장
+                    clean_url = re.sub(r'[?&]OC=[^&]*', '', url_fixed)
+                    fail_records.append({"stage":"call","guide":g,"title":title,"url":clean_url,"status":status,"ctype":ctype,"size":size})
             except Exception as e:
-                print(f"      EXC {type(e).__name__}: {e}")
-                fail_records.append({"stage":"call","guide":g,"title":title,"url":url_fixed,"error":str(e)})
+                print(f"      ⚠️ {type(e).__name__}: {e}")
+                # URL에서 OC 제거 후 저장
+                clean_url = re.sub(r'[?&]OC=[^&]*', '', url_fixed)
+                fail_records.append({"stage":"call","guide":g,"title":title,"url":clean_url,"error":str(e)})
 
         meta.append({"guide": g, "title": title, "called": len(samples), "ok": ok})
 
-    # 결과 요약 저장
-    summary_path = os.path.join(OUT_DIR, "summary.json")
+    # 결과 요약 저장 (민감정보 제거)
+    clean_meta = sanitize_data(meta)
+    clean_fails = sanitize_data(fail_records)
+    
+    summary_path = os.path.join(out_dir, "테스트요약.json")
     with open(summary_path, "w", encoding="utf-8") as f:
-        json.dump({"meta": meta, "fail": fail_records}, f, ensure_ascii=False, indent=2)
+        json.dump({
+            "test_time": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            "total_guides": len(meta),
+            "meta": clean_meta, 
+            "fail": clean_fails
+        }, f, ensure_ascii=False, indent=2)
     print("\n[3/4] 요약 저장 →", summary_path)
 
     # 간단 요약 표
     total_called = sum(m["called"] for m in meta)
     total_ok     = sum(m["ok"]     for m in meta)
-    print(f"[4/4] 전체 요약: 가이드 {len(meta)}건, 샘플 호출 {total_called}건, 성공 {total_ok}건, 실패 {total_called - total_ok}건")
+    print(f"\n[4/4] 📊 전체 요약")
+    print("="*60)
+    print(f"✅ 성공: {total_ok}건")
+    print(f"❌ 실패: {total_called - total_ok}건")
+    print(f"📚 가이드: {len(meta)}건")
+    print(f"🔍 전체 호출: {total_called}건")
+    
     if fail_records:
-        print("  - 실패 예시 3건:")
+        print(f"\n⚠️ 실패 예시 (최대 3건):")
         for rec in fail_records[:3]:
-            print("    >", rec)
+            print(f"  - {rec.get('title', 'Unknown')}: {rec.get('error', rec.get('status', 'Unknown error'))}")
+    
+    print(f"\n💾 모든 결과가 {out_dir}/ 폴더에 저장되었습니다.")
 
 if __name__ == "__main__":
     main()
