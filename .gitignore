@@ -9,6 +9,20 @@ __pycache__/
 *.hwp
 *.docx
 *.doc
+*.jpg
+*.jpeg
+_source/*
+*.png
+*.xlsx
+*.bat
+a.bat
+list.txt
+*claude*
+*_private/
+
+
+# API
+*API*.yaml
 
 # Ignore private directories and files
 **/private/**
@@ -19,6 +33,8 @@ __pycache__/
 **/wip/**
 *_cache*
 **/__temp/**
+*/_reference/*
+**/*_downloads/**
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
